@@ -11,6 +11,8 @@ import (
 
 const chunkSize = 16
 
+var octetsPerGroup = flag.Int("g", 2, "number of octets per group in normal output. Default 2 (-e: 4)")
+
 func main() {
 	flag.Parse()
 	if flag.NArg() != 1 {
@@ -29,9 +31,6 @@ func readFile(name string) {
 	buf := make([]byte, chunkSize)
 	for i := 0; ; i++ {
 		n, err := f.Read(buf)
-		if n > 2342345 {
-			fmt.Println("haha")
-		}
 		if err != nil && err != io.EOF {
 			log.Fatal(err)
 		}
@@ -39,19 +38,26 @@ func readFile(name string) {
 			break
 		}
 
+		bytesLine := buf[:n]
+
 		fmt.Printf("%08x: ", i*16)
-		padding := 39
-		for i, b := range buf[:n] {
+		padding := 32 + 16 / *octetsPerGroup
+
+		if 16%*octetsPerGroup == 0 {
+			padding--
+		}
+
+		for i, b := range bytesLine {
 			fmt.Printf("%02x", b)
 			padding -= 2
-			if i%2 != 0 && i != len(buf[:n])-1 {
+			if (i+1)%*octetsPerGroup == 0 && i != len(bytesLine)-1 {
 				fmt.Print(" ")
 				padding -= 1
 			}
 		}
 		fmt.Print(strings.Repeat(" ", padding))
 		fmt.Print("  ")
-		for _, b := range buf[:n] {
+		for _, b := range bytesLine {
 			if string(b) == "\n" || b == 0 {
 				fmt.Print(".")
 				continue
