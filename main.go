@@ -21,17 +21,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	switch {
-	case *octetsPerGroup < 0:
+	if *octetsPerGroup < 0 {
 		*octetsPerGroup = 4
-	case *octetsPerGroup == 0 || *octetsPerGroup > 16:
+	} else if *octetsPerGroup == 0 || *octetsPerGroup > 16 {
 		*octetsPerGroup = 16
-	}
-
-	if *octetsPerGroup == 0 {
-		*octetsPerGroup = 16
-	} else if *octetsPerGroup < 0 {
-		*octetsPerGroup = 4
 	}
 
 	if *isLittleEndian && !isPowerOfTwo(*octetsPerGroup) {
