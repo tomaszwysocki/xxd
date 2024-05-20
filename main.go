@@ -14,6 +14,7 @@ const chunkSize = 16
 
 var octetsPerGroup = flag.Int("g", 2, "number of octets per group in normal output. Default 2 (-e: 4)")
 var isLittleEndian = flag.Bool("e", false, "little-endian dump")
+var outputLength = flag.Int("l", -1, "stop after <l> octets")
 
 var padding int
 
@@ -22,18 +23,18 @@ func main() {
 	if flag.NArg() != 1 {
 		os.Exit(1)
 	}
-
 	if *octetsPerGroup < 0 {
 		*octetsPerGroup = 4
 	} else if *octetsPerGroup == 0 || *octetsPerGroup > 16 {
 		*octetsPerGroup = 16
 	}
-
 	if *isLittleEndian && !isPowerOfTwo(*octetsPerGroup) {
 		fmt.Println("xxd: number of octets per group must be a power of 2 with -e.")
 		os.Exit(1)
 	}
-
+	if *outputLength < 0 {
+		*outputLength = math.MaxInt
+	}
 	filename := flag.Arg(0)
 	readFile(filename)
 }
@@ -45,7 +46,9 @@ func readFile(name string) {
 	}
 	defer f.Close()
 	buf := make([]byte, chunkSize)
-	for i := 0; ; i++ {
+	var bytesRead int
+	var lengthReached bool
+	for i := 0; !lengthReached; i++ {
 		n, err := f.Read(buf)
 		if err != nil && err != io.EOF {
 			log.Fatal(err)
@@ -55,7 +58,11 @@ func readFile(name string) {
 		}
 
 		bytesLine := buf[:n]
-
+		if n >= *outputLength-bytesRead {
+			bytesLine = buf[:*outputLength-bytesRead]
+			lengthReached = true
+		}
+		bytesRead += n
 		fmt.Printf("%08x: ", i*chunkSize)
 		padding = 32 + 16 / *octetsPerGroup
 
